@@ -1,7 +1,10 @@
-import yaml
-with open("catalog/uptime_kuma.yaml") as file:
-    app = yaml.safe_load(file)
+from pathlib import Path
 
-print(app)
-print(f"{app['name']} ({app['category']}) runs on port {app['web_port']}")
-print(app["services"]["uptime_kuma"]["image"])
+import yaml
+
+catalog_folder = Path("catalog")
+
+for path in sorted(catalog_folder.glob("*.yaml")):
+    with open(path) as file:
+        app = yaml.safe_load(file)
+    print(f"{app['name']} ({app['category']}) runs on port {app['web_port']}")
