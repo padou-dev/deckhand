@@ -2,9 +2,12 @@ from pathlib import Path
 
 import yaml
 
-catalog_folder = Path("catalog")
+CATALOG_FOLDER = Path("catalog")
 
-for path in sorted(catalog_folder.glob("*.yaml")):
-    with open(path) as file:
-        app = yaml.safe_load(file)
-    print(f"{app['name']} ({app['category']}) runs on port {app['web_port']}")
+
+def load_catalog():
+    apps = []
+    for path in sorted(CATALOG_FOLDER.glob("*.yaml")):
+        with open(path) as file:
+            apps.append(yaml.safe_load(file))
+    return apps

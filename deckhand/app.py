@@ -1,5 +1,7 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header
+from textual.widgets import Footer, Header, SelectionList
+
+from deckhand.catalog import load_catalog
 
 
 class DeckhandApp(App):
@@ -8,6 +10,13 @@ class DeckhandApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
+
+        options = []
+        for entry in load_catalog():
+            label = f"{entry['name']}  ({entry['category']})"
+            options.append((label, entry["id"]))
+        yield SelectionList(*options)
+
         yield Footer()
 
 
