@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import yaml
+import subprocess
 
 STACKS_FOLDER = Path.home() / "deckhand_stacks"
 
@@ -19,3 +20,13 @@ def write_stack(entry):
         yaml.safe_dump(compose, file, sort_keys=False)
 
     return compose_file
+
+def start_stack(app_id):
+    stack_folder = STACKS_FOLDER / app_id
+    result = subprocess.run(
+        ["docker", "compose", "up", "-d"],
+        cwd=stack_folder,
+        capture_output=True,
+        text=True,
+    )
+    return result

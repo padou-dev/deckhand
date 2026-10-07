@@ -1,15 +1,15 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, SelectionList
+from textual import work
 
 from deckhand.catalog import load_catalog
-from deckhand.generator import write_stack
-
+from deckhand.generator import start_stack, write_stack
 
 class DeckhandApp(App):
     TITLE = "Deckhand"
     BINDINGS = [
         ("r", "review", "Review"),
-        ("g", "generate", "Generate"),
+        ("i", "install", "Install"),
         ("q", "quit", "Quit"),
     ]
 
@@ -33,18 +33,29 @@ class DeckhandApp(App):
         else:
             self.notify("Nothing selected yet.", severity="warning")    
 
-    def action_generate(self) -> None:
+    def action_install(self) -> None:
         selected = self.query_one(SelectionList).selected
         if not selected:
             self.notify("Nothing selected yet.", severity="warning")
             return
+        self.install_apps(selected)
 
+    @work(thread=True, exclusive=True)
+    def install_apps(self, selected) -> None:
         for app_id in selected:
-            compose_file = write_stack(self.catalog[app_id])
-            if compose_file:
-                self.notify(f"Created {compose_file}")
+            write_stack(self.catalog[app_id])
+            self.call_from_thread(self.notify, f"Starting {app_id}...")
+
+            result = start_stack(app_id)
+            if result.returncode == 0:
+                self.call_from_thread(self.notify, f"{app_id} is running.")
             else:
-                self.notify(f"{app_id} already exists, skipped.", severity="warning")
+                self.call_from_thread(
+                    self.notify,
+                    f"{app_id} failed: {result.stderr.strip()}",
+                    severity="error",
+                    timeout=15,
+                )
 
 
 if __name__ == "__main__":
