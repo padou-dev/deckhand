@@ -1,0 +1,18 @@
+# --- Info for Deckhand's menu ---
+id: uptime_kuma
+name: Uptime Kuma
+category: monitoring
+description: Self-hosted uptime monitoring with a clean status dashboard.
+architectures: [amd64, arm64]
+web_port: 3001
+
+# --- Becomes the docker-compose.yml ---
+services:
+  uptime_kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime_kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
