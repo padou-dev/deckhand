@@ -1,0 +1,16 @@
+id: vaultwarden
+name: Vaultwarden
+category: security
+description: Lightweight Bitwarden-compatible password manager server.
+architectures: [amd64, arm64]
+web_port: 8222
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    ports:
+      - "8222:80"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

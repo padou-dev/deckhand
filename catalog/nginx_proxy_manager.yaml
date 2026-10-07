@@ -1,0 +1,19 @@
+id: nginx_proxy_manager
+name: Nginx Proxy Manager
+category: network
+description: Reverse proxy with free HTTPS certificates and a simple web UI.
+architectures: [amd64, arm64]
+web_port: 81
+
+services:
+  nginx_proxy_manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx_proxy_manager
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    restart: unless-stopped

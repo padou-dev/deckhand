@@ -1,0 +1,17 @@
+id: portainer
+name: Portainer
+category: management
+description: Web dashboard for managing containers, images, volumes and networks.
+architectures: [amd64, arm64]
+web_port: 9443
+
+services:
+  portainer:
+    image: portainer/portainer-ce:lts
+    container_name: portainer
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/data
+    restart: unless-stopped

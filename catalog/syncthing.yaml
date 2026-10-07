@@ -1,0 +1,20 @@
+id: syncthing
+name: Syncthing
+category: productivity
+description: Continuous file sync between your devices, no cloud needed.
+architectures: [amd64, arm64]
+web_port: 8384
+
+services:
+  syncthing:
+    image: syncthing/syncthing:latest
+    container_name: syncthing
+    hostname: deckhand-syncthing
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp"
+    volumes:
+      - ./data:/var/syncthing
+    restart: unless-stopped

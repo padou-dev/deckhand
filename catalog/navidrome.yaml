@@ -1,0 +1,17 @@
+id: navidrome
+name: Navidrome
+category: media
+description: Lightweight music streaming server for your own collection.
+architectures: [amd64, arm64]
+web_port: 4533
+
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    ports:
+      - "4533:4533"
+    volumes:
+      - ./data:/data
+      - ./music:/music:ro
+    restart: unless-stopped

@@ -1,0 +1,16 @@
+id: stirling_pdf
+name: Stirling-PDF
+category: productivity
+description: Merge, split, convert and edit PDFs locally in your browser.
+architectures: [amd64, arm64]
+web_port: 8090
+
+services:
+  stirling_pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: stirling_pdf
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./configs:/configs
+    restart: unless-stopped
