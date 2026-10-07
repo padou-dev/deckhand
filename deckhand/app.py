@@ -6,7 +6,10 @@ from deckhand.catalog import load_catalog
 
 class DeckhandApp(App):
     TITLE = "Deckhand"
-    BINDINGS = [("q", "quit", "Quit")]
+    BINDINGS = [
+        ("r", "review", "Review"),
+        ("q", "quit", "Quit"),
+    ]
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -18,6 +21,13 @@ class DeckhandApp(App):
         yield SelectionList(*options)
 
         yield Footer()
+
+    def action_review(self) -> None:
+        selected = self.query_one(SelectionList).selected
+        if selected:
+            self.notify("Selected: " + ", ".join(selected))
+        else:
+            self.notify("Nothing selected yet.", severity="warning")    
 
 
 if __name__ == "__main__":
