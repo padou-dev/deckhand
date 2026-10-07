@@ -1,0 +1,40 @@
+id: nextcloud
+name: Nextcloud
+category: productivity
+description: Your own cloud for files, calendars, contacts and more.
+architectures: [amd64, arm64]
+web_port: 8085
+
+env:
+  DB_PASSWORD: generate
+  DB_ROOT_PASSWORD: generate
+
+services:
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    ports:
+      - "8085:80"
+    environment:
+      MYSQL_HOST: nextcloud_db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./html:/var/www/html
+    depends_on:
+      - nextcloud_db
+    restart: unless-stopped
+
+  nextcloud_db:
+    image: mariadb:lts
+    container_name: nextcloud_db
+    command: --transaction-isolation=READ-COMMITTED
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./db:/var/lib/mysql
+    restart: unless-stopped
