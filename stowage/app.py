@@ -133,6 +133,8 @@ class StowageApp(App):
         selection_list = self.query_one(SelectionList)
         selection_list.clear_options()
         selection_list.add_options(options)
+        if options:
+            selection_list.highlighted = 0
 
     # --- Reacting to the user ---
 
