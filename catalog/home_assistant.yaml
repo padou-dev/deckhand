@@ -1,0 +1,24 @@
+id: home_assistant
+name: Home Assistant
+category: home
+description: Open-source home automation that controls and automates your smart home devices locally.
+architectures: [amd64, arm64]
+web_port: 8123
+notes: Runs on the host network so it can discover smart devices, and in privileged mode for access to USB and Bluetooth hardware.
+
+env:
+  TZ: timezone
+
+services:
+  home_assistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: home_assistant
+    network_mode: host
+    privileged: true
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped

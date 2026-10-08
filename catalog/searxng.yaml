@@ -1,0 +1,22 @@
+id: searxng
+name: SearXNG
+category: productivity
+description: Private metasearch engine that combines results from many search engines without tracking you.
+architectures: [amd64, arm64]
+web_port: 8888
+
+env:
+  SEARXNG_SECRET: generate
+
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8888:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./config:/etc/searxng
+      - ./data:/var/cache/searxng
+    restart: unless-stopped

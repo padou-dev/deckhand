@@ -1,0 +1,23 @@
+id: dockge
+name: Dockge
+category: management
+description: Web UI for managing Docker Compose stacks, including every app Stowage installs.
+architectures: [amd64, arm64]
+web_port: 5001
+
+env:
+  STACKS_DIR: stacks_dir
+
+services:
+  dockge:
+    image: louislam/dockge:1
+    container_name: dockge
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+      - ${STACKS_DIR}:${STACKS_DIR}
+    environment:
+      DOCKGE_STACKS_DIR: ${STACKS_DIR}
+    restart: unless-stopped

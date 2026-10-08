@@ -1,0 +1,21 @@
+id: cloudflared
+name: Cloudflare Tunnel
+category: network
+description: Securely expose your apps to the internet through Cloudflare, without opening router ports.
+architectures: [amd64, arm64]
+notes: Create a tunnel in the Cloudflare Zero Trust dashboard and copy its token. Afterwards, add public hostnames in that dashboard pointing to your apps, for example http://localhost:8096 for Jellyfin.
+
+env:
+  TUNNEL_TOKEN:
+    ask: Paste your Cloudflare Tunnel token
+    secret: true
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped

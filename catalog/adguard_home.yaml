@@ -1,0 +1,23 @@
+id: adguard_home
+name: AdGuard Home
+category: network
+description: Network-wide ad and tracker blocking through your own DNS server.
+architectures: [amd64, arm64]
+web_port: 3000
+notes: Give this server a static IP first. In the setup wizard, set the admin web interface port to 3000. Then set your router's DNS server to this server's IP.
+
+env:
+  HOST_IP: host_ip
+
+services:
+  adguard_home:
+    image: adguard/adguardhome:latest
+    container_name: adguard_home
+    ports:
+      - "${HOST_IP}:53:53/tcp"
+      - "${HOST_IP}:53:53/udp"
+      - "3000:3000/tcp"
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - ./conf:/opt/adguardhome/conf
+    restart: unless-stopped

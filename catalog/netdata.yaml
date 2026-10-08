@@ -4,6 +4,7 @@ category: monitoring
 description: Real-time monitoring of your server's CPU, memory, disks, network and containers.
 architectures: [amd64, arm64]
 web_port: 19999
+notes: Netdata needs broad read-only access to the host (processes, network, system files) to monitor it, so this container runs with extra privileges.
 
 services:
   netdata:
