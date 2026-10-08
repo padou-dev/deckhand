@@ -3,15 +3,38 @@ from pathlib import Path
 import yaml
 import subprocess
 import secrets
+import socket
 
 STACKS_FOLDER = Path.home() / "deckhand_stacks"
+
+def detect_host_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("1.1.1.1", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    
+def detect_timezone():
+    localtime = Path("/etc/localtime").resolve()
+    if "zoneinfo" in localtime.parts:
+        index = localtime.parts.index("zoneinfo")
+        return "/".join(localtime.parts[index + 1:])
+    return "UTC"
+
+def resolve_value(value):
+    if value == "generate":
+        return secrets.token_urlsafe(24)
+    if value == "timezone":
+        return detect_timezone()
+    if value == "host_ip":
+        return detect_host_ip()
+    return value
 
 def build_env(entry):
     lines = []
     for name, value in entry.get("env", {}).items():
-        if value == "generate":
-            value = secrets.token_urlsafe(24)
-        lines.append(f"{name}={value}")
+        lines.append(f"{name}={resolve_value(value)}")
     return "\n".join(lines) + "\n"
 
 def write_stack(entry):

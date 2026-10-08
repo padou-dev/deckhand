@@ -1,0 +1,24 @@
+id: homepage
+name: Homepage
+category: management
+description: A customizable dashboard for all your self-hosted apps.
+architectures: [amd64, arm64]
+web_port: 3000
+
+env:
+  TZ: timezone
+  HOST_IP: host_ip
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: ${TZ}
+      HOMEPAGE_ALLOWED_HOSTS: ${HOST_IP}:3000,localhost:3000
+    volumes:
+      - ./config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
