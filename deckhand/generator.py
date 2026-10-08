@@ -66,3 +66,6 @@ def start_stack(app_id):
         text=True,
     )
     return result
+
+def stack_exists(app_id):
+    return (STACKS_FOLDER / app_id / "docker-compose.yml").exists()

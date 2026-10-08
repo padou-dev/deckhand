@@ -4,7 +4,8 @@ from textual.containers import Horizontal
 from textual.widgets import Footer, Header, SelectionList, Static
 
 from deckhand.catalog import load_catalog
-from deckhand.generator import start_stack, write_stack
+from deckhand.generator import stack_exists, start_stack, write_stack
+from deckhand.ports import busy_ports
 
 class DeckhandApp(App):
     TITLE = "Deckhand"
@@ -69,6 +70,17 @@ class DeckhandApp(App):
                 self.call_from_thread(
                     self.set_status, f"Installing {app_id} ({number}/{total})..."
                 )
+                if not stack_exists(app_id):
+                    busy = busy_ports(self.catalog[app_id])
+                    if busy:
+                        ports_text = ", ".join(str(port) for port in busy)
+                        self.call_from_thread(
+                            self.notify,
+                            f"{app_id} skipped: port {ports_text} already in use.",
+                            severity="error",
+                            timeout=15,
+                        )
+                        continue
                 write_stack(self.catalog[app_id])
 
                 result = start_stack(app_id)
