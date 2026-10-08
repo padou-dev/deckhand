@@ -4,6 +4,8 @@ import socket
 def host_ports(entry):
     ports = []
     for service in entry["services"].values():
+        if service.get("network_mode") == "host":
+            ports.append(entry["web_port"])
         for mapping in service.get("ports", []):
             if mapping.endswith("/udp"):
                 continue
