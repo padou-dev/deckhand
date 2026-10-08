@@ -101,6 +101,7 @@ class DeckhandApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.theme = "gruvbox"
         self.refresh_list()
         self.query_one(SelectionList).focus()
         self.query_one("#categories").border_title = "Categories"
