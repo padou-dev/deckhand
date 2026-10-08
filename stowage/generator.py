@@ -4,6 +4,8 @@ import yaml
 import subprocess
 import secrets
 import socket
+import os
+import shutil
 
 STACKS_FOLDER = Path.home() / "stowage_stacks"
 
@@ -29,6 +31,10 @@ def resolve_value(value):
         return detect_timezone()
     if value == "host_ip":
         return detect_host_ip()
+    if value == "uid":
+        return str(os.getuid())
+    if value == "gid":
+        return str(os.getgid())
     return value
 
 def build_env(entry):
@@ -46,6 +52,12 @@ def write_stack(entry):
 
     stack_folder.mkdir(parents=True, exist_ok=True)
 
+    for service in entry["services"].values():
+        for volume in service.get("volumes", []):
+            host_path = volume.split(":")[0]
+            if host_path.startswith("./"):
+                (stack_folder / host_path).mkdir(parents=True, exist_ok=True)
+
     compose = {"services": entry["services"]}
     with open(compose_file, "w") as file:
         yaml.safe_dump(compose, file, sort_keys=False)
@@ -57,15 +69,41 @@ def write_stack(entry):
         
     return compose_file
 
-def start_stack(app_id):
-    stack_folder = STACKS_FOLDER / app_id
-    result = subprocess.run(
+def start_stack(app_id, should_cancel):
+    process = subprocess.Popen(
         ["docker", "compose", "up", "-d"],
+        cwd=STACKS_FOLDER / app_id,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    while True:
+        try:
+            _, errors = process.communicate(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            if should_cancel():
+                process.terminate()
+                process.communicate()
+                return "cancelled", ""
+            continue
+        if process.returncode == 0:
+            return "ok", ""
+        return "failed", errors.strip()
+
+def remove_stack(app_id):
+    stack_folder = STACKS_FOLDER / app_id
+    subprocess.run(
+        ["docker", "compose", "down"],
         cwd=stack_folder,
         capture_output=True,
-        text=True,
+        start_new_session=True,
     )
-    return result
+    try:
+        shutil.rmtree(stack_folder)
+        return True
+    except OSError:
+        return False
 
 def stack_exists(app_id):
     return (STACKS_FOLDER / app_id / "docker-compose.yml").exists()

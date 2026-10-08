@@ -5,7 +5,7 @@ from textual.widgets import Footer, Header, Input, OptionList, SelectionList, St
 from textual.widgets.option_list import Option
 
 from stowage.catalog import load_catalog
-from stowage.generator import stack_exists, start_stack, write_stack
+from stowage.generator import STACKS_FOLDER, remove_stack, stack_exists, start_stack, write_stack
 from stowage.health import wait_until_ready, web_url
 from stowage.ports import busy_ports
 from stowage.screens import ConfirmQuitScreen
@@ -67,6 +67,7 @@ class StowageApp(App):
     """
 
     installing = False
+    cancelling = False
     current_app = ""
 
     # --- Building the screen ---
@@ -79,6 +80,8 @@ class StowageApp(App):
         self.chosen = set()
         self.category = "all"
         self.search = ""
+        self.install_order = []
+        self.results = {}
 
         categories = sorted({entry["category"] for entry in self.catalog.values()})
         category_options = [Option("All", id="all")]
@@ -171,7 +174,7 @@ class StowageApp(App):
             self.notify("Nothing selected yet.", severity="warning")
 
     def action_quit(self) -> None:
-        if isinstance(self.screen, ConfirmQuitScreen):
+        if isinstance(self.screen, ConfirmQuitScreen) or self.cancelling:
             return
         if self.installing:
             self.push_screen(ConfirmQuitScreen(self.current_app), self.handle_quit_answer)
@@ -179,8 +182,17 @@ class StowageApp(App):
         self.exit()
 
     def handle_quit_answer(self, cancel) -> None:
-        if cancel:
+        if not cancel:
+            return
+        if not self.installing:
             self.exit()
+            return
+        self.cancelling = True
+        self.set_status("Cancelling install and cleaning up...")
+        self.notify(
+            "Cancelling. Stowage will close when cleanup is finished.",
+            severity="warning",
+        )
 
     def action_install(self) -> None:
         if self.installing:
@@ -207,19 +219,26 @@ class StowageApp(App):
     @work(thread=True, exclusive=True)
     def install_apps(self, selected) -> None:
         self.installing = True
+        self.install_order = selected
+        self.results = {}
         try:
             total = len(selected)
             for number, app_id in enumerate(selected, start=1):
+                if self.cancelling:
+                    break
+
                 entry = self.catalog[app_id]
                 self.current_app = entry["name"]
                 self.call_from_thread(
                     self.set_status, f"Installing {app_id} ({number}/{total})..."
                 )
 
-                if not stack_exists(app_id):
+                is_new = not stack_exists(app_id)
+                if is_new:
                     busy = busy_ports(entry)
                     if busy:
                         ports_text = ", ".join(str(port) for port in busy)
+                        self.results[app_id] = ("–", f"skipped, port {ports_text} in use")
                         self.call_from_thread(
                             self.notify,
                             f"{app_id} skipped: port {ports_text} already in use.",
@@ -229,21 +248,40 @@ class StowageApp(App):
                         continue
 
                 write_stack(entry)
-                result = start_stack(app_id)
-                if result.returncode != 0:
+                outcome, errors = start_stack(app_id, should_cancel=lambda: self.cancelling)
+
+                if outcome == "cancelled":
+                    if not is_new:
+                        self.results[app_id] = ("✘", "cancelled, existing setup left in place")
+                    elif remove_stack(app_id):
+                        self.results[app_id] = ("✘", "cancelled, files removed")
+                    else:
+                        folder = STACKS_FOLDER / app_id
+                        self.results[app_id] = (
+                            "✘",
+                            f"cancelled, remove leftover files with: sudo rm -rf {folder}",
+                        )
+                    break
+
+                if outcome == "failed":
+                    self.results[app_id] = ("✘", "failed")
                     self.call_from_thread(
                         self.notify,
-                        f"{app_id} failed: {result.stderr.strip()}",
+                        f"{app_id} failed: {errors}",
                         severity="error",
                         timeout=15,
                     )
                     continue
 
                 url = web_url(entry)
+                self.results[app_id] = ("✔", f"installed, {url}")
                 self.call_from_thread(
                     self.set_status, f"Waiting for {app_id} to start..."
                 )
-                if wait_until_ready(url):
+                ready = wait_until_ready(url, should_stop=lambda: self.cancelling)
+                if self.cancelling:
+                    break
+                if ready:
                     self.call_from_thread(
                         self.notify,
                         f"{entry['name']} is ready at {url}",
@@ -257,17 +295,27 @@ class StowageApp(App):
                         severity="warning",
                         timeout=20,
                     )
-            self.call_from_thread(
-                self.notify,
-                "All installs finished. It's safe to quit Stowage.",
-                title="Done",
-                timeout=20,
-            )
+
+            if not self.cancelling:
+                self.call_from_thread(
+                    self.notify,
+                    "All installs finished. It's safe to quit Stowage.",
+                    title="Done",
+                    timeout=20,
+                )
         finally:
             self.installing = False
-            self.call_from_thread(self.set_status, "")
+            if self.cancelling:
+                self.call_from_thread(self.exit)
+            else:
+                self.call_from_thread(self.set_status, "")
 
 
 if __name__ == "__main__":
     app = StowageApp()
     app.run()
+    if app.cancelling:
+        print("Install cancelled.")
+        for app_id in app.install_order:
+            symbol, text = app.results.get(app_id, ("–", "not started"))
+            print(f"  {symbol} {app.catalog[app_id]['name']}: {text}")

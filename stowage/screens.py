@@ -5,7 +5,10 @@ from textual.widgets import Button, Label
 
 
 class ConfirmQuitScreen(ModalScreen[bool]):
-    BINDINGS = [("escape", "stay", "Keep installing")]
+    BINDINGS = [
+        ("enter", "confirm", "Cancel install and quit"),
+        ("escape", "stay", "Keep installing"),
+    ]
 
     DEFAULT_CSS = """
     ConfirmQuitScreen {
@@ -46,11 +49,16 @@ class ConfirmQuitScreen(ModalScreen[bool]):
             )
             yield Label("Apps already installed are kept.", id="note")
             with Horizontal(id="buttons"):
-                yield Button("Cancel install and quit", variant="error", id="quit")
-                yield Button("Keep installing", variant="primary", id="stay")
+                yield Button("Cancel install and quit (Enter)", variant="error", id="quit")
+                yield Button("Keep installing (Esc)", variant="primary", id="stay")
 
     def on_mount(self) -> None:
         self.query_one("#dialog").border_title = "Cancel install?"
+        for button in self.query(Button):
+            button.can_focus = False
+
+    def action_confirm(self) -> None:
+        self.dismiss(True)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "quit")
