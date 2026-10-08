@@ -89,6 +89,15 @@ docker compose down                            # stop and remove (data is kept)
 | Syncthing | Productivity | http://localhost:8384 |
 | Uptime Kuma | Monitoring | http://localhost:3001 |
 | Vaultwarden | Security | http://localhost:8222 |
+| AdGuard Home | Network | http://localhost:3000 |
+| Cloudflare Tunnel | Network | No web UI (configured in the Cloudflare dashboard) |
+| Dockge | Management | http://localhost:5001 |
+| Home Assistant | Home | http://localhost:8123 |
+| Netdata | Monitoring | http://localhost:19999 |
+| Paperless-ngx | Productivity | http://localhost:8000 |
+| SearXNG | Productivity | http://localhost:8888 |
+| WireGuard (wg-easy) | Network | http://localhost:51821 |
+| Immich | Media | http://localhost:2283 |
 
 From another device on your network, replace `localhost` with your server's IP address.
 
@@ -134,10 +143,16 @@ services:
 
 Optional fields:
 - `web_scheme: https` for apps that only serve HTTPS.
+- `notes:` setup steps shown in the app's details panel.
+- `web_port` can be left out for apps without a web interface.
+- `networks:` at the top level, copied into the compose file.
 - `env:` for values written to the app's `.env` file. Use `${NAME}` in the compose section to reference them. Special values:
   - `generate`: a random password
   - `timezone`: the system's timezone
   - `host_ip`: the server's LAN IP address
+  - `uid` / `gid`: your user and group IDs
+  - `stacks_dir`: the folder where Stowage keeps installed apps
+  - `ask: <question>`: ask the user during install (add `secret: true` to hide the input)
   - anything else is used as written
 
 ## Troubleshooting
