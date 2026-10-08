@@ -2,6 +2,8 @@
 
 Pick self-hosted apps from a terminal menu and get clean, portable Docker Compose setups. Installs Docker for you.
 
+![Deckhand installing Immich](docs/screenshot.png)
+
 ## Features
 
 - **One-command setup.** Installs Docker from Docker's official repository, Python, and Deckhand itself.
