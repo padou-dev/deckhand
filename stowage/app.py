@@ -8,6 +8,7 @@ from stowage.catalog import load_catalog
 from stowage.generator import stack_exists, start_stack, write_stack
 from stowage.health import wait_until_ready, web_url
 from stowage.ports import busy_ports
+from stowage.screens import ConfirmQuitScreen
 
 LOGO = "\n".join([
     "╔═╗╔╦╗╔═╗╦ ╦╔═╗╔═╗╔═╗",
@@ -66,7 +67,7 @@ class StowageApp(App):
     """
 
     installing = False
-    confirm_quit = False
+    current_app = ""
 
     # --- Building the screen ---
 
@@ -170,14 +171,16 @@ class StowageApp(App):
             self.notify("Nothing selected yet.", severity="warning")
 
     def action_quit(self) -> None:
-        if self.installing and not self.confirm_quit:
-            self.confirm_quit = True
-            self.notify(
-                "An install is still running. Press q again to quit anyway.",
-                severity="warning",
-            )
+        if isinstance(self.screen, ConfirmQuitScreen):
+            return
+        if self.installing:
+            self.push_screen(ConfirmQuitScreen(self.current_app), self.handle_quit_answer)
             return
         self.exit()
+
+    def handle_quit_answer(self, cancel) -> None:
+        if cancel:
+            self.exit()
 
     def action_install(self) -> None:
         if self.installing:
@@ -208,6 +211,7 @@ class StowageApp(App):
             total = len(selected)
             for number, app_id in enumerate(selected, start=1):
                 entry = self.catalog[app_id]
+                self.current_app = entry["name"]
                 self.call_from_thread(
                     self.set_status, f"Installing {app_id} ({number}/{total})..."
                 )
@@ -261,7 +265,6 @@ class StowageApp(App):
             )
         finally:
             self.installing = False
-            self.confirm_quit = False
             self.call_from_thread(self.set_status, "")
 
 
