@@ -6,6 +6,7 @@ from textual.widgets import Footer, Header, SelectionList, Static
 from deckhand.catalog import load_catalog
 from deckhand.generator import stack_exists, start_stack, write_stack
 from deckhand.ports import busy_ports
+from deckhand.health import wait_until_ready, web_url
 
 class DeckhandApp(App):
     TITLE = "Deckhand"
@@ -67,11 +68,13 @@ class DeckhandApp(App):
         try:
             total = len(selected)
             for number, app_id in enumerate(selected, start=1):
+                entry = self.catalog[app_id]
                 self.call_from_thread(
                     self.set_status, f"Installing {app_id} ({number}/{total})..."
                 )
+
                 if not stack_exists(app_id):
-                    busy = busy_ports(self.catalog[app_id])
+                    busy = busy_ports(entry)
                     if busy:
                         ports_text = ", ".join(str(port) for port in busy)
                         self.call_from_thread(
@@ -81,17 +84,35 @@ class DeckhandApp(App):
                             timeout=15,
                         )
                         continue
-                write_stack(self.catalog[app_id])
 
+                write_stack(entry)
                 result = start_stack(app_id)
-                if result.returncode == 0:
-                    self.call_from_thread(self.notify, f"{app_id} is running.")
-                else:
+                if result.returncode != 0:
                     self.call_from_thread(
                         self.notify,
                         f"{app_id} failed: {result.stderr.strip()}",
                         severity="error",
                         timeout=15,
+                    )
+                    continue
+
+                url = web_url(entry)
+                self.call_from_thread(
+                    self.set_status, f"Waiting for {app_id} to start..."
+                )
+                if wait_until_ready(url):
+                    self.call_from_thread(
+                        self.notify,
+                        f"{entry['name']} is ready at {url}",
+                        timeout=20,
+                    )
+                else:
+                    self.call_from_thread(
+                        self.notify,
+                        f"{entry['name']} started but isn't responding yet. "
+                        f"Try {url} in a minute.",
+                        severity="warning",
+                        timeout=20,
                     )
         finally:
             self.installing = False
