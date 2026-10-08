@@ -186,6 +186,14 @@ class DeckhandApp(App):
         if not self.chosen:
             self.notify("Nothing selected yet.", severity="warning")
             return
+        count = len(self.chosen)
+        noun = "app" if count == 1 else "apps"
+        self.notify(
+            f"Installing {count} {noun}. You'll get a message as each one is ready. "
+            "Please keep Deckhand open until the install finishes.",
+            title="Install started",
+            timeout=10,
+        )
         self.install_apps(sorted(self.chosen))
 
     # --- Installing ---
@@ -245,6 +253,12 @@ class DeckhandApp(App):
                         severity="warning",
                         timeout=20,
                     )
+            self.call_from_thread(
+                self.notify,
+                "All installs finished. It's safe to quit Deckhand.",
+                title="Done",
+                timeout=20,
+            )
         finally:
             self.installing = False
             self.confirm_quit = False
