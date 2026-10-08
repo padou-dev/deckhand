@@ -5,7 +5,7 @@ import subprocess
 import secrets
 import socket
 
-STACKS_FOLDER = Path.home() / "deckhand_stacks"
+STACKS_FOLDER = Path.home() / "stowage_stacks"
 
 def detect_host_ip():
     try:

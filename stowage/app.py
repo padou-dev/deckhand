@@ -4,21 +4,21 @@ from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Input, OptionList, SelectionList, Static
 from textual.widgets.option_list import Option
 
-from deckhand.catalog import load_catalog
-from deckhand.generator import stack_exists, start_stack, write_stack
-from deckhand.health import wait_until_ready, web_url
-from deckhand.ports import busy_ports
+from stowage.catalog import load_catalog
+from stowage.generator import stack_exists, start_stack, write_stack
+from stowage.health import wait_until_ready, web_url
+from stowage.ports import busy_ports
 
 LOGO = "\n".join([
-    "╔╦╗╔═╗╔═╗╦╔═╦ ╦╔═╗╔╗╔╔╦╗",
-    " ║║║╣ ║  ╠╩╗╠═╣╠═╣║║║ ║║",
-    "═╩╝╚═╝╚═╝╩ ╩╩ ╩╩ ╩╝╚╝═╩╝",
+    "╔═╗╔╦╗╔═╗╦ ╦╔═╗╔═╗╔═╗",
+    "╚═╗ ║ ║ ║║║║╠═╣║ ╦║╣ ",
+    "╚═╝ ╩ ╚═╝╚╩╝╩ ╩╚═╝╚═╝",
 ])
 
 TAGLINE = "Pick self-hosted apps, get clean Docker Compose setups."
 
-class DeckhandApp(App):
-    TITLE = "Deckhand"
+class StowageApp(App):
+    TITLE = "Stowage"
     BINDINGS = [
         ("/", "focus_search", "Search"),
         ("escape", "focus_list", "Back to list"),
@@ -190,7 +190,7 @@ class DeckhandApp(App):
         noun = "app" if count == 1 else "apps"
         self.notify(
             f"Installing {count} {noun}. You'll get a message as each one is ready. "
-            "Please keep Deckhand open until the install finishes.",
+            "Please keep Stowage open until the install finishes.",
             title="Install started",
             timeout=10,
         )
@@ -255,7 +255,7 @@ class DeckhandApp(App):
                     )
             self.call_from_thread(
                 self.notify,
-                "All installs finished. It's safe to quit Deckhand.",
+                "All installs finished. It's safe to quit Stowage.",
                 title="Done",
                 timeout=20,
             )
@@ -266,5 +266,5 @@ class DeckhandApp(App):
 
 
 if __name__ == "__main__":
-    app = DeckhandApp()
+    app = StowageApp()
     app.run()

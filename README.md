@@ -1,16 +1,16 @@
-# Deckhand
+# Stowage
 
 Pick self-hosted apps from a terminal menu and get clean, portable Docker Compose setups. Installs Docker for you.
 
-![Deckhand installing Immich](docs/screenshot.png)
+![Stowage installing Immich](docs/screenshot.png)
 
 ## Features
 
-- **One-command setup.** Installs Docker from Docker's official repository, Python, and Deckhand itself.
+- **One-command setup.** Installs Docker from Docker's official repository, Python, and Stowage itself.
 - **A polished terminal menu.** Search, browse by category, and see each app's details before installing.
-- **Plain Compose files you own.** Every app gets its own folder with a normal `docker-compose.yml`. Remove Deckhand and your apps keep working.
+- **Plain Compose files you own.** Every app gets its own folder with a normal `docker-compose.yml`. Remove Stowage and your apps keep working.
 - **Generated secrets.** Database passwords are created randomly and stored in a `.env` file only you can read.
-- **Safety checks.** Deckhand skips apps whose ports are already taken, never overwrites an existing setup, and tells you when an app is actually ready to use.
+- **Safety checks.** Stowage skips apps whose ports are already taken, never overwrites an existing setup, and tells you when an app is actually ready to use.
 
 ## Supported systems
 
@@ -21,13 +21,13 @@ Pick self-hosted apps from a terminal menu and get clean, portable Docker Compos
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/padou-dev/deckhand/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/padou-dev/stowage/main/install.sh | bash
 ```
 
 > [!TIP]
 > Prefer to read a script before running it? Download it first:
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/padou-dev/deckhand/main/install.sh -o install.sh
+> curl -fsSL https://raw.githubusercontent.com/padou-dev/stowage/main/install.sh -o install.sh
 > less install.sh
 > bash install.sh
 > ```
@@ -37,10 +37,10 @@ Run the installer as your normal user, **not** with `sudo`. It asks for your pas
 When it finishes, **log out and back in**, then run:
 
 ```bash
-deckhand
+stowage
 ```
 
-## Using Deckhand
+## Using Stowage
 
 | Key | Action |
 |---|---|
@@ -58,16 +58,16 @@ deckhand
 
 | Path | Contents |
 |---|---|
-| `~/deckhand_stacks/<app>/` | Each installed app: `docker-compose.yml`, `.env` and its data |
-| `~/.local/share/deckhand/` | Deckhand itself |
-| `~/.local/bin/deckhand` | The `deckhand` command |
+| `~/stowage_stacks/<app>/` | Each installed app: `docker-compose.yml`, `.env` and its data |
+| `~/.local/share/stowage/` | Stowage itself |
+| `~/.local/bin/stowage` | The `stowage` command |
 
 ## Managing apps after install
 
 Every app is a standard Docker Compose project, so the usual commands work:
 
 ```bash
-cd ~/deckhand_stacks/jellyfin
+cd ~/stowage_stacks/jellyfin
 docker compose ps                              # status
 docker compose logs -f                         # follow the logs
 docker compose pull && docker compose up -d    # update to the latest image
@@ -103,15 +103,15 @@ From another device on your network, replace `localhost` with your server's IP a
 ## Uninstall
 
 ```bash
-rm -rf ~/.local/share/deckhand ~/.local/bin/deckhand
+rm -rf ~/.local/share/stowage ~/.local/bin/stowage
 ```
 
 > [!NOTE]
-> This removes Deckhand only. Your apps in `~/deckhand_stacks` keep running. To remove an app, run `docker compose down` in its folder, then delete the folder. Data folders created by containers may be owned by root, so you may need `sudo rm -r`.
+> This removes Stowage only. Your apps in `~/stowage_stacks` keep running. To remove an app, run `docker compose down` in its folder, then delete the folder. Data folders created by containers may be owned by root, so you may need `sudo rm -r`.
 
 ## Adding an app
 
-Each app is one YAML file in `catalog/`. The top half describes the app for Deckhand's menu; the bottom half is plain Docker Compose.
+Each app is one YAML file in `catalog/`. The top half describes the app for Stowage's menu; the bottom half is plain Docker Compose.
 
 ```yaml
 id: uptime_kuma
@@ -143,7 +143,7 @@ Optional fields:
 ## Troubleshooting
 
 - **`permission denied ... docker.sock`:** the docker group change hasn't applied yet. Log out and back in. On WSL, run `wsl --terminate <distro>` from PowerShell and reopen it.
-- **`deckhand: command not found`:** `~/.local/bin` isn't on your `PATH` yet. Log out and back in.
+- **`stowage: command not found`:** `~/.local/bin` isn't on your `PATH` yet. Log out and back in.
 - **An app was skipped because a port is in use:** something else is using that port. Run `ss -tlnp` to see what.
 - **An app says it's running but the page won't load:** some apps take a minute on first start. Check with `docker compose logs -f` in the app's folder.
 - **"systemd is not running" on WSL:** add `[boot]` and `systemd=true` to `/etc/wsl.conf`, then restart the distro.

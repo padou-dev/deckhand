@@ -9,7 +9,7 @@ services:
   syncthing:
     image: syncthing/syncthing:latest
     container_name: syncthing
-    hostname: deckhand-syncthing
+    hostname: stowage-syncthing
     ports:
       - "8384:8384"
       - "22000:22000/tcp"

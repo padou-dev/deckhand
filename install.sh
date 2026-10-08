@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deckhand installer: installs Docker and Python, then launches Deckhand.
+# Stowage installer: installs Docker and Python, then launches Stowage.
 
 set -euo pipefail
 
@@ -19,7 +19,7 @@ case "$ID" in
         info "Detected $PRETTY_NAME"
         ;;
     *)
-        error "Unsupported distribution: $ID. Deckhand currently supports Ubuntu and Debian."
+        error "Unsupported distribution: $ID. Stowage currently supports Ubuntu and Debian."
         ;;
 esac
 
@@ -93,37 +93,37 @@ fi
 info "Installing Python and git..."
 $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv git
 
-# --- Get Deckhand's files ---
-INSTALL_DIR="$HOME/.local/share/deckhand"
+# --- Get Stowage's files ---
+INSTALL_DIR="$HOME/.local/share/stowage"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)"
 
-if [[ -f "$SCRIPT_DIR/deckhand/app.py" ]]; then
+if [[ -f "$SCRIPT_DIR/stowage/app.py" ]]; then
     info "Installing from local copy: $SCRIPT_DIR"
     mkdir -p "$INSTALL_DIR"
-    rm -rf "$INSTALL_DIR/deckhand" "$INSTALL_DIR/catalog"
-    cp -r "$SCRIPT_DIR/deckhand" "$SCRIPT_DIR/catalog" "$SCRIPT_DIR/requirements.txt" "$INSTALL_DIR/"
+    rm -rf "$INSTALL_DIR/stowage" "$INSTALL_DIR/catalog"
+    cp -r "$SCRIPT_DIR/stowage" "$SCRIPT_DIR/catalog" "$SCRIPT_DIR/requirements.txt" "$INSTALL_DIR/"
 elif [[ -d "$INSTALL_DIR/.git" ]]; then
-    info "Updating Deckhand..."
+    info "Updating Stowage..."
     git -C "$INSTALL_DIR" pull --ff-only
 else
-    info "Downloading Deckhand..."
-    git clone https://github.com/padou-dev/deckhand.git "$INSTALL_DIR"
+    info "Downloading Stowage..."
+    git clone https://github.com/padou-dev/stowage.git "$INSTALL_DIR"
 fi
 
-# --- Set up Deckhand's Python environment ---
+# --- Set up Stowage's Python environment ---
 info "Setting up Python environment..."
 python3 -m venv "$INSTALL_DIR/.venv"
 "$INSTALL_DIR/.venv/bin/pip" install --quiet --upgrade pip
 "$INSTALL_DIR/.venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
 
-# --- Create the 'deckhand' command ---
+# --- Create the 'stowage' command ---
 mkdir -p "$HOME/.local/bin"
-cat > "$HOME/.local/bin/deckhand" <<EOF
+cat > "$HOME/.local/bin/stowage" <<EOF
 #!/usr/bin/env bash
 cd "$INSTALL_DIR"
-exec "$INSTALL_DIR/.venv/bin/python" -m deckhand.app "\$@"
+exec "$INSTALL_DIR/.venv/bin/python" -m stowage.app "\$@"
 EOF
-chmod +x "$HOME/.local/bin/deckhand"
+chmod +x "$HOME/.local/bin/stowage"
 
-info "Deckhand is installed!"
-info "Log out and back in (so the docker group and PATH changes apply), then run: deckhand"
+info "Stowage is installed!"
+info "Log out and back in (so the docker group and PATH changes apply), then run: stowage"
