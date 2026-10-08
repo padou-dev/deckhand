@@ -5,10 +5,17 @@ from textual.widgets import Footer, Header, Input, OptionList, SelectionList, St
 from textual.widgets.option_list import Option
 
 from stowage.catalog import load_catalog
-from stowage.generator import STACKS_FOLDER, remove_stack, stack_exists, start_stack, write_stack
+from stowage.generator import (
+    STACKS_FOLDER,
+    questions,
+    remove_stack,
+    stack_exists,
+    start_stack,
+    write_stack,
+)
 from stowage.health import wait_until_ready, web_url
 from stowage.ports import busy_ports
-from stowage.screens import ConfirmQuitScreen
+from stowage.screens import AskScreen, ConfirmQuitScreen
 
 LOGO = "\n".join([
     "╔═╗╔╦╗╔═╗╦ ╦╔═╗╔═╗╔═╗",
@@ -17,6 +24,7 @@ LOGO = "\n".join([
 ])
 
 TAGLINE = "Pick self-hosted apps, get clean Docker Compose setups."
+
 
 class StowageApp(App):
     TITLE = "Stowage"
@@ -89,7 +97,6 @@ class StowageApp(App):
             category_options.append(Option(category.title(), id=category))
 
         yield Header()
-        yield Header()
         yield Static(LOGO, id="logo")
         yield Static(TAGLINE, id="tagline")
         yield Input(placeholder="Search apps...", id="search")
@@ -130,6 +137,8 @@ class StowageApp(App):
     # --- Reacting to the user ---
 
     def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id != "search":
+            return
         self.search = event.value
         self.refresh_list()
 
@@ -149,14 +158,17 @@ class StowageApp(App):
     def on_selection_list_selection_highlighted(self, event) -> None:
         entry = self.catalog[event.selection.value]
         architectures = ", ".join(entry["architectures"])
+        web_port = entry.get("web_port", "none")
 
         details = (
             f"[b]{entry['name']}[/b]\n\n"
             f"{entry['description']}\n\n"
             f"Category: {entry['category']}\n"
-            f"Web port: {entry['web_port']}\n"
+            f"Web port: {web_port}\n"
             f"Runs on: {architectures}"
         )
+        if "notes" in entry:
+            details += f"\n\n[b]Note:[/b] {entry['notes']}"
         self.query_one("#details", Static).update(details)
 
     # --- Actions (key bindings) ---
@@ -201,7 +213,30 @@ class StowageApp(App):
         if not self.chosen:
             self.notify("Nothing selected yet.", severity="warning")
             return
-        count = len(self.chosen)
+        self.prepare_install(sorted(self.chosen))
+
+    # --- Installing ---
+
+    def set_status(self, text) -> None:
+        self.sub_title = text
+
+    @work(exclusive=True, group="prepare")
+    async def prepare_install(self, selected) -> None:
+        answers = {}
+        for app_id in selected:
+            if stack_exists(app_id):
+                continue
+            entry = self.catalog[app_id]
+            for name, question, secret in questions(entry):
+                answer = await self.push_screen_wait(
+                    AskScreen(entry["name"], question, secret)
+                )
+                if answer is None:
+                    self.notify("Install cancelled. Nothing was changed.", severity="warning")
+                    return
+                answers.setdefault(app_id, {})[name] = answer
+
+        count = len(selected)
         noun = "app" if count == 1 else "apps"
         self.notify(
             f"Installing {count} {noun}. You'll get a message as each one is ready. "
@@ -209,15 +244,10 @@ class StowageApp(App):
             title="Install started",
             timeout=10,
         )
-        self.install_apps(sorted(self.chosen))
+        self.install_apps(selected, answers)
 
-    # --- Installing ---
-
-    def set_status(self, text) -> None:
-        self.sub_title = text
-
-    @work(thread=True, exclusive=True)
-    def install_apps(self, selected) -> None:
+    @work(thread=True, exclusive=True, group="install")
+    def install_apps(self, selected, answers) -> None:
         self.installing = True
         self.install_order = selected
         self.results = {}
@@ -247,7 +277,7 @@ class StowageApp(App):
                         )
                         continue
 
-                write_stack(entry)
+                write_stack(entry, answers.get(app_id))
                 outcome, errors = start_stack(app_id, should_cancel=lambda: self.cancelling)
 
                 if outcome == "cancelled":
@@ -270,6 +300,13 @@ class StowageApp(App):
                         f"{app_id} failed: {errors}",
                         severity="error",
                         timeout=15,
+                    )
+                    continue
+
+                if "web_port" not in entry:
+                    self.results[app_id] = ("✔", "installed")
+                    self.call_from_thread(
+                        self.notify, f"{entry['name']} is running.", timeout=20
                     )
                     continue
 

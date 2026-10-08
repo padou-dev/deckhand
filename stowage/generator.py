@@ -1,13 +1,26 @@
+import os
+import secrets
+import shutil
+import socket
+import subprocess
 from pathlib import Path
 
 import yaml
-import subprocess
-import secrets
-import socket
-import os
-import shutil
 
 STACKS_FOLDER = Path.home() / "stowage_stacks"
+
+
+def stack_exists(app_id):
+    return (STACKS_FOLDER / app_id / "docker-compose.yml").exists()
+
+
+def detect_timezone():
+    localtime = Path("/etc/localtime").resolve()
+    if "zoneinfo" in localtime.parts:
+        index = localtime.parts.index("zoneinfo")
+        return "/".join(localtime.parts[index + 1:])
+    return "UTC"
+
 
 def detect_host_ip():
     try:
@@ -16,13 +29,7 @@ def detect_host_ip():
             return sock.getsockname()[0]
     except OSError:
         return "127.0.0.1"
-    
-def detect_timezone():
-    localtime = Path("/etc/localtime").resolve()
-    if "zoneinfo" in localtime.parts:
-        index = localtime.parts.index("zoneinfo")
-        return "/".join(localtime.parts[index + 1:])
-    return "UTC"
+
 
 def resolve_value(value):
     if value == "generate":
@@ -35,15 +42,31 @@ def resolve_value(value):
         return str(os.getuid())
     if value == "gid":
         return str(os.getgid())
+    if value == "stacks_dir":
+        return str(STACKS_FOLDER)
     return value
 
-def build_env(entry):
+
+def questions(entry):
+    found = []
+    for name, value in entry.get("env", {}).items():
+        if isinstance(value, dict) and "ask" in value:
+            found.append((name, value["ask"], value.get("secret", False)))
+    return found
+
+
+def build_env(entry, answers):
     lines = []
     for name, value in entry.get("env", {}).items():
-        lines.append(f"{name}={resolve_value(value)}")
+        if isinstance(value, dict):
+            value = answers.get(name, "")
+        else:
+            value = resolve_value(value)
+        lines.append(f"{name}={value}")
     return "\n".join(lines) + "\n"
 
-def write_stack(entry):
+
+def write_stack(entry, answers=None):
     stack_folder = STACKS_FOLDER / entry["id"]
     compose_file = stack_folder / "docker-compose.yml"
 
@@ -59,15 +82,20 @@ def write_stack(entry):
                 (stack_folder / host_path).mkdir(parents=True, exist_ok=True)
 
     compose = {"services": entry["services"]}
+    for key in ("networks", "volumes"):
+        if key in entry:
+            compose[key] = entry[key]
+
     with open(compose_file, "w") as file:
         yaml.safe_dump(compose, file, sort_keys=False)
 
     if "env" in entry:
         env_file = stack_folder / ".env"
-        env_file.write_text(build_env(entry))
+        env_file.write_text(build_env(entry, answers or {}))
         env_file.chmod(0o600)
-        
+
     return compose_file
+
 
 def start_stack(app_id, should_cancel):
     process = subprocess.Popen(
@@ -91,6 +119,7 @@ def start_stack(app_id, should_cancel):
             return "ok", ""
         return "failed", errors.strip()
 
+
 def remove_stack(app_id):
     stack_folder = STACKS_FOLDER / app_id
     subprocess.run(
@@ -104,6 +133,3 @@ def remove_stack(app_id):
         return True
     except OSError:
         return False
-
-def stack_exists(app_id):
-    return (STACKS_FOLDER / app_id / "docker-compose.yml").exists()
