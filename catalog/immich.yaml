@@ -1,0 +1,60 @@
+id: immich
+name: Immich
+category: media
+description: Self-hosted photo and video backup with face recognition and smart search.
+architectures: [amd64, arm64]
+web_port: 2283
+
+env:
+  IMMICH_VERSION: release
+  UPLOAD_LOCATION: ./library
+  DB_DATA_LOCATION: ./postgres
+  DB_USERNAME: postgres
+  DB_DATABASE_NAME: immich
+  DB_PASSWORD: generate
+  TZ: timezone
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION}
+    container_name: immich_server
+    ports:
+      - "2283:2283"
+    volumes:
+      - ${UPLOAD_LOCATION}:/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - database
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
+    container_name: immich_machine_learning
+    volumes:
+      - ./model-cache:/cache
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/valkey/valkey:9
+    container_name: immich_redis
+    healthcheck:
+      test: redis-cli ping | grep -q PONG || exit 1
+    restart: unless-stopped
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich_postgres
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+    shm_size: 128mb
+    restart: unless-stopped
