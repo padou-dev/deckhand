@@ -23,6 +23,11 @@ case "$ID" in
         ;;
 esac
 
+# --- Don't run the whole script with sudo ---
+if [[ "$EUID" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+    error "Please run this script without sudo. It will ask for your password when needed."
+fi
+
 # --- Work out how to run commands as root ---
 if [[ "$EUID" -eq 0 ]]; then
     SUDO=""
@@ -83,3 +88,42 @@ if [[ "$TARGET_USER" != "root" ]] \
     $SUDO usermod -aG docker "$TARGET_USER"
     info "Added $TARGET_USER to the docker group (takes effect after logging out and back in)."
 fi
+
+# --- Install Python and git ---
+info "Installing Python and git..."
+$SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv git
+
+# --- Get Deckhand's files ---
+INSTALL_DIR="$HOME/.local/share/deckhand"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)"
+
+if [[ -f "$SCRIPT_DIR/deckhand/app.py" ]]; then
+    info "Installing from local copy: $SCRIPT_DIR"
+    mkdir -p "$INSTALL_DIR"
+    rm -rf "$INSTALL_DIR/deckhand" "$INSTALL_DIR/catalog"
+    cp -r "$SCRIPT_DIR/deckhand" "$SCRIPT_DIR/catalog" "$SCRIPT_DIR/requirements.txt" "$INSTALL_DIR/"
+elif [[ -d "$INSTALL_DIR/.git" ]]; then
+    info "Updating Deckhand..."
+    git -C "$INSTALL_DIR" pull --ff-only
+else
+    info "Downloading Deckhand..."
+    git clone https://github.com/padou-dev/deckhand.git "$INSTALL_DIR"
+fi
+
+# --- Set up Deckhand's Python environment ---
+info "Setting up Python environment..."
+python3 -m venv "$INSTALL_DIR/.venv"
+"$INSTALL_DIR/.venv/bin/pip" install --quiet --upgrade pip
+"$INSTALL_DIR/.venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
+
+# --- Create the 'deckhand' command ---
+mkdir -p "$HOME/.local/bin"
+cat > "$HOME/.local/bin/deckhand" <<EOF
+#!/usr/bin/env bash
+cd "$INSTALL_DIR"
+exec "$INSTALL_DIR/.venv/bin/python" -m deckhand.app "\$@"
+EOF
+chmod +x "$HOME/.local/bin/deckhand"
+
+info "Deckhand is installed!"
+info "Log out and back in (so the docker group and PATH changes apply), then run: deckhand"
